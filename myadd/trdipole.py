@@ -26,6 +26,7 @@ def get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2):
     dipole2 = np.concatenate([fvo, fvv], axis=1)
     dipole = np.concatenate([dipole1, dipole2], axis=0)
     trdm = np.einsum("ij,ij->", dm1, dipole)
+    print("CCSD: ", trdm)
     return trdip
 
 
@@ -89,6 +90,7 @@ def cisd():
     dm1 = trans_rdm1(myci, cs[0], cs[1])
     dipole = mol.intor("int1e_r", comp=3)[0]
     trdm = np.einsum("ij,ij->", dm1, dipole)
+    print("CISD: ", trdm)
     return
 
 
