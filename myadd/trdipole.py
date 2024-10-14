@@ -15,5 +15,5 @@ def hamr2cisd():
     return
 
 
-def get_transition_dipole(eom_ee):
+def get_transition_dipole(eom_ee, t1, t2, l1, l2, r1, r2):
     return
