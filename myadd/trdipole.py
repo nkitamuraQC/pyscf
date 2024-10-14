@@ -1,5 +1,5 @@
 from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1, CISD
-from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet
+from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet, EOMEE
 from pyscf.cc.ccsd import _ChemistsERIs
 import numpy as np
 
@@ -53,7 +53,7 @@ def run_eomee():
     eea,cea = mycc.eaccsd(nroots=1)
     eee,cee = mycc.eeccsd(nroots=1)
 
-    eom_cc = EOMEESinglet(mycc)
+    eom_cc = EOMEETriplet(mycc)
     r1, r2 = eom_cc.vector_to_amplitudes(cee)
 
     dipole = mol.intor("int1e_r", comp=3)[0]
