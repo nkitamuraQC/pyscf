@@ -1,4 +1,4 @@
-from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1
+from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1, CISD
 from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet
 from pyscf.cc.ccsd import _ChemistsERIs
 import numpy as np
@@ -10,12 +10,22 @@ def get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2):
     eom_cc = EOMEESinglet(mycc)
     matvec = eom_cc.gen_matvec(imds=imds)
     vec = eom_cc.amplitudes_to_vector(r1, r2)
+    vec2 = eom_cc.amplitudes_to_vector(r1, r2)
     vec = matvec(vec)
     hr1, hr2 = eom_cc.vector_to_amplitudes(vec)
     hr_cisd = amplitudes_to_cisdvec(r0, hr1, hr2)
     nmo = mycc._scf.mo_coeff.shape[1]
     nocc = mycc._scf.mol.nelectron // 2
     trdip = overlap(lamda_cisd, hr_cisd, nmo, nocc)
+
+    myci = CISD(mycc._scf)
+    dm1 = trans_rdm1(myci, lamda_cisd, vec2)
+    fov, foo, fvv = imds.Fov, imds.Foo, imds.Fvv
+    fvo = fov.T
+    dipole1 = np.concatenate([foo, fov], axis=1)
+    dipole2 = np.concatenate([fvo, fvv], axis=1)
+    dipole = np.concatenate([dipole1, dipole2], axis=0)
+    trdm = np.einsum("ij,ij->", dm1, dipole)
     return trdip
 
 
@@ -25,7 +35,7 @@ def run_eomee():
     mol.verbose = 5
     mol.unit = 'A'
     mol.atom = 'O 0 0 0; O 0 0 1.2'
-    mol.basis = 'ccpvdz'
+    mol.basis = 'sto-3g'
     mol.build()
     
     mf = scf.RHF(mol)
@@ -65,7 +75,7 @@ def cisd():
     mol.verbose = 5
     mol.unit = 'A'
     mol.atom = 'O 0 0 0; O 0 0 1.2'
-    mol.basis = 'ccpvdz'
+    mol.basis = 'sto-3g'
     mol.build()
     
     mf = scf.RHF(mol)
