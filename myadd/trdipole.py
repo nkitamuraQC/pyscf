@@ -1,6 +1,5 @@
 from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec
-from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet
-from pyscf.cc.ccsd import _ChemistsERIs, ao2mo
+from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet
 import numpy as np
 
 
