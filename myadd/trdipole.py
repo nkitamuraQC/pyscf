@@ -80,3 +80,10 @@ def cisd():
 
 def fill_zero(eris):
     return
+
+
+if __name__ == "__main__":
+    mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee()
+    get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
+
+    cisd()
