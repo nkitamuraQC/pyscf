@@ -1,5 +1,6 @@
 from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1
 from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet
+from pyscf.cc.ccsd import _ChemistsERIs
 import numpy as np
 
 
@@ -47,9 +48,12 @@ def run_eomee():
 
     dipole = mol.intor("int1e_r", comp=3)[0]
 
+    nmo = mycc._scf.mo_coeff.shape[1]
+    nocc = mycc._scf.mol.nelectron // 2
+
     eris = mycc.ao2mo()
     eris.fock = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
-    eris = fill_zero(eris)
+    eris = fill_zero(eris, nocc, nmo)
     imds = _IMDS(mycc, eris)
     imds = imds.make_ee()
     return mycc, imds, t1, t2, l1, l2, r1, r2
@@ -78,8 +82,16 @@ def cisd():
     return
 
 
-def fill_zero(eris):
-    return
+def fill_zero(eris, o, nmo):
+    v = nmo - o
+    eris.oooo = np.zeros((o, o, o, o))
+    eris.ovoo = np.zeros((o, v, o, o))
+    eris.oovv = np.zeros((o, o, v, v))
+    eris.ovvo = np.zeros((o, v, v, o))
+    eris.ovov = np.zeros((o, v, o, v))
+    eris.ovvv = np.zeros((o, v, v, v))
+    eris.vvvv = np.zeros((v, v, v, v))
+    return eris
 
 
 if __name__ == "__main__":
