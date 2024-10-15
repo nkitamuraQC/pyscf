@@ -62,11 +62,10 @@ def run_eomee():
     nmo = mycc._scf.mo_coeff.shape[1]
     nocc = mycc._scf.mol.nelectron // 2
 
-    eris = mycc.ao2mo()
+    eris = mycc.ao2mo(mo_coeff=np.zeros((nmo, nmo)))
     eris.fock = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
-    eris = fill_zero(eris, nocc, nmo)
-    imds = _IMDS(mycc, eris)
-    imds = imds.make_ee()
+    #eris = fill_zero(eris, nocc, nmo)
+    imds = eom_cc.make_imds(eris)
     return mycc, imds, t1, t2, l1, l2, r1, r2
 
 
