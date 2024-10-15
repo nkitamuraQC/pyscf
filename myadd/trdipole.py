@@ -66,7 +66,7 @@ def run_eomee():
     eris.fock = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     #eris = fill_zero(eris, nocc, nmo)
     imds = eom_cc.make_imds(eris)
-    print(r1, r2)
+    print(r1, len(r2))
     return mycc, imds, t1, t2, l1, l2, r1, r2
 
 
