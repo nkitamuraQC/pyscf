@@ -8,8 +8,8 @@ import numpy as np
 
 
 def get_transition_dipole(mycc, imds_dip, t1, t2, l1, l2, r1, r2):
-    #l0, r0 = np.ones((1)), np.zeros((1))
-    l0, r0 = np.ones((1)), np.ones((1))
+    l0, r0 = np.ones((1)), np.zeros((1))
+    #l0, r0 = np.ones((1)), np.ones((1))
     l1_zero = np.zeros_like(l1)
     l2_zero = np.zeros_like(l2)
     lamda_cisd = amplitudes_to_cisdvec(l0, l1, l2)
@@ -47,14 +47,14 @@ def run_eomee(mol, dir=1):
     from pyscf import gto, scf, cc, tdscf
     
     mf = scf.RHF(mol)
-    mf.verbose = 7
+    mf.verbose = 0
     mf.scf()
     mytd = tdscf.TDDFT(mf)
     mytd.kernel()
     trdip = mytd.transition_dipole()
     
     mycc = cc.RCCSD(mf)
-    mycc.verbose = 7
+    mycc.verbose = 0
     mycc.ccsd()
     t1, t2 = mycc.t1, mycc.t2
 
@@ -66,7 +66,6 @@ def run_eomee(mol, dir=1):
 
     eom_cc = EOMEETriplet(mycc)
     #eom_cc = EOMEESinglet(mycc)
-    print(cee)
     r1, r2 = eom_cc.vector_to_amplitudes(cee)
     #r1, r2 = eom_cc.vector_to_amplitudes(cee[2])
 
@@ -83,7 +82,7 @@ def run_eomee(mol, dir=1):
     #imds_dip.Foo = eris.fock[:nocc, :nocc]
     #imds_dip.Fov = eris.fock[:nocc, nocc:]
     #imds_dip.Fvv = eris.fock[nocc:, nocc:]
-    print(r1, len(r2))
+    #print(r1, len(r2))
     #r2 = (r2[0] + r2[1]) / 2
     return mycc, imds_dip, t1, t2, l1, l2, r1, r2
 
@@ -91,13 +90,13 @@ def run_eomee(mol, dir=1):
 def cisd(mol, dir=1):
     from pyscf import gto, scf, cc, tdscf
     mf = scf.RHF(mol)
-    mf.verbose = 7
+    mf.verbose = 0
     mf.scf()
 
     mytd = tdscf.TDRHF(mf)
     mytd.kernel()
     trdip = mytd.transition_dipole()
-    print("TDSCF: ", trdip)
+    print(f"TDSCF: {dir}", trdip[0, dir])
 
     myci = ci.CISD(mf)
     myci.nroots = 2
@@ -107,7 +106,7 @@ def cisd(mol, dir=1):
     dipole = mol.intor("int1e_r", comp=3)[dir]
     dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip = np.einsum("ij,ij->", dm1, dipole) * 2
-    print("CISD: ", trdip)
+    print(f"CISD: {dir}", trdip)
 
     #f = FCI(mf)
     ##f = CASCI(mf, 4, 4)
@@ -138,16 +137,17 @@ def fill_zero(eris, o, nmo):
 if __name__ == "__main__":
     from pyscf import gto, scf, ci
     mol = gto.Mole()
-    mol.verbose = 5
+    mol.verbose = 0
     mol.unit = 'A'
     mol.atom = 'Cl 0 0 0; Cl 0 0 1.0'
+    #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
-    mol.basis = 'ccpvdz'
+    mol.basis = 'def2-svp'
     mol.build()
-    dir = 1
-    mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee(mol, dir=dir)
-    trdip = get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
+    for dir in [0, 1, 2]:
+        mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee(mol, dir=dir)
+        trdip = get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
 
-    cisd(mol, dir=dir)
+        cisd(mol, dir=dir)
 
-    print("CCSD: ", trdip)
+        print(f"CCSD: {dir}", trdip[1])
