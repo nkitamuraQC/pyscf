@@ -67,6 +67,7 @@ def run_eomee():
     #eris = fill_zero(eris, nocc, nmo)
     imds = eom_cc.make_imds(eris)
     print(r1, len(r2))
+    r2 = (r2[0] + r2[1]) / 2
     return mycc, imds, t1, t2, l1, l2, r1, r2
 
 
