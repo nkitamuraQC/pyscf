@@ -36,14 +36,8 @@ def get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2):
     return trdip, trdip2
 
 
-def run_eomee():
+def run_eomee(mol):
     from pyscf import gto, scf, cc
-    mol = gto.Mole()
-    mol.verbose = 5
-    mol.unit = 'A'
-    mol.atom = 'Li 0 0 0; Li 0 0 1.2'
-    mol.basis = 'sto-3g'
-    mol.build()
     
     mf = scf.RHF(mol)
     mf.verbose = 7
@@ -77,14 +71,7 @@ def run_eomee():
     return mycc, imds, t1, t2, l1, l2, r1, r2
 
 
-def cisd():
-    from pyscf import gto, scf, ci
-    mol = gto.Mole()
-    mol.verbose = 5
-    mol.unit = 'A'
-    mol.atom = 'Li 0 0 0; Li 0 0 1.2'
-    mol.basis = 'sto-3g'
-    mol.build()
+def cisd(mol):
     
     mf = scf.RHF(mol)
     mf.verbose = 7
@@ -96,6 +83,7 @@ def cisd():
 
     dm1 = trans_rdm1(myci, cs[0], cs[1])
     dipole = mol.intor("int1e_r", comp=3)[0]
+    dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip = np.einsum("ij,ij->", dm1, dipole)
     print("CISD: ", trdip)
 
@@ -105,6 +93,7 @@ def cisd():
     dm1 = fci_trans_rdm1(c[0], c[1], mf.mo_coeff.shape[1], mf.mol.nelectron)
 
     dipole = mol.intor("int1e_r", comp=3)[0]
+    dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip = np.einsum("ij,ij->", dm1, dipole)
     print("FCI: ", trdip)
     return
@@ -123,9 +112,16 @@ def fill_zero(eris, o, nmo):
 
 
 if __name__ == "__main__":
-    mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee()
+    from pyscf import gto, scf, ci
+    mol = gto.Mole()
+    mol.verbose = 5
+    mol.unit = 'A'
+    mol.atom = 'C 0 0 0; C 0 0 1.2'
+    mol.basis = 'sto-3g'
+    mol.build()
+    mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee(mol)
     trdip = get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
 
-    cisd()
+    cisd(mol)
 
     print("CCSD: ", trdip)
