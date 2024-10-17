@@ -2,6 +2,7 @@ from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1, CISD, cisd
 from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet, EOMEE, eeccsd_matvec_triplet, eeccsd_matvec_singlet
 from pyscf.cc.ccsd import _ChemistsERIs
 from pyscf.fci import FCI
+from pyscf.mcscf import CASCI
 from pyscf.fci.direct_spin1 import trans_rdm1 as fci_trans_rdm1
 import numpy as np
 
@@ -54,18 +55,20 @@ def run_eomee(mol):
     
     eip,cip = mycc.ipccsd(nroots=1)
     eea,cea = mycc.eaccsd(nroots=1)
-    eee,cee = mycc.eeccsd(nroots=1)
+    eee,cee = mycc.eeccsd(nroots=3)
 
     eom_cc = EOMEETriplet(mycc)
-    r1, r2 = eom_cc.vector_to_amplitudes(cee)
+    print(cee)
+    r1, r2 = eom_cc.vector_to_amplitudes(cee[0])
+    #r1, r2 = eom_cc.vector_to_amplitudes(cee[2])
 
-    dipole = mol.intor("int1e_r", comp=3)[0]
+    dipole = mol.intor("int1e_r", comp=3)[2]
 
     nmo = mycc._scf.mo_coeff.shape[1]
     nocc = mycc._scf.mol.nelectron // 2
 
-    #eris = mycc.ao2mo(mo_coeff=np.zeros((nmo, nmo)))
-    eris = mycc.ao2mo()
+    eris = mycc.ao2mo(mo_coeff=np.zeros((nmo, nmo)))
+    #eris = mycc.ao2mo()
     eris.fock = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     #eris = fill_zero(eris, nocc, nmo)
     imds_dip = eom_cc.make_imds(eris)
@@ -85,17 +88,19 @@ def cisd(mol):
     es, cs = myci.kernel()
 
     dm1 = trans_rdm1(myci, cs[0], cs[1])
-    dipole = mol.intor("int1e_r", comp=3)[0]
+    dipole = mol.intor("int1e_r", comp=3)[2]
     dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip = np.einsum("ij,ij->", dm1, dipole)
     print("CISD: ", trdip)
 
     f = FCI(mf)
+    #f = CASCI(mf, 4, 4)
+    #f.fcisolver.nroots = 2
     f.nroots = 2
     e, c = f.kernel()
     dm1 = fci_trans_rdm1(c[0], c[1], mf.mo_coeff.shape[1], mf.mol.nelectron)
 
-    dipole = mol.intor("int1e_r", comp=3)[0]
+    dipole = mol.intor("int1e_r", comp=3)[2]
     dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip = np.einsum("ij,ij->", dm1, dipole)
     print("FCI: ", trdip)
