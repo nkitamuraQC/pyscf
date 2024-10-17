@@ -8,7 +8,8 @@ import numpy as np
 
 
 def get_transition_dipole(mycc, imds_dip, t1, t2, l1, l2, r1, r2):
-    l0, r0 = np.ones((1)), np.zeros((1))
+    #l0, r0 = np.ones((1)), np.zeros((1))
+    l0, r0 = np.ones((1)), np.ones((1))
     l1_zero = np.zeros_like(l1)
     l2_zero = np.zeros_like(l2)
     lamda_cisd = amplitudes_to_cisdvec(l0, l1, l2)
