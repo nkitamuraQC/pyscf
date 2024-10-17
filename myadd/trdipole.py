@@ -1,33 +1,39 @@
-from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1, CISD
-from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet, EOMEE
+from pyscf.ci.cisd import overlap, amplitudes_to_cisdvec, trans_rdm1, CISD, cisdvec_to_amplitudes
+from pyscf.cc.eom_rccsd import _IMDS, EOMEESinglet, EOMEETriplet, EOMEE, eeccsd_matvec_triplet, eeccsd_matvec_singlet
 from pyscf.cc.ccsd import _ChemistsERIs
+from pyscf.fci import FCI
+from pyscf.fci.direct_spin1 import trans_rdm1 as fci_trans_rdm1
 import numpy as np
 
 
 def get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2):
     l0, r0 = np.zeros((1)), np.zeros((1))
     lamda_cisd = amplitudes_to_cisdvec(l0, l1, l2)
-    eom_cc = EOMEESinglet(mycc)
-    matvec = eom_cc.gen_matvec(imds=imds)
+    eom_cc = EOMEETriplet(mycc)
+    #matvec, _ = eom_cc.gen_matvec(imds=imds)
     vec = eom_cc.amplitudes_to_vector(r1, r2)
-    vec2 = eom_cc.amplitudes_to_vector(r1, r2)
-    vec = matvec(vec)
+    vec = eeccsd_matvec_triplet(eom_cc, vec, imds)
     hr1, hr2 = eom_cc.vector_to_amplitudes(vec)
+    vec1, vec2 = eom_cc.vector_to_amplitudes(vec)
+    hr2 = (hr2[0] + hr2[1]) / 2
+    vec2 = (vec2[0] + vec2[1]) / 2
     hr_cisd = amplitudes_to_cisdvec(r0, hr1, hr2)
+    vec3 = amplitudes_to_cisdvec(r0, vec1, vec2)
     nmo = mycc._scf.mo_coeff.shape[1]
     nocc = mycc._scf.mol.nelectron // 2
+    print(lamda_cisd.shape, hr_cisd.shape)
+    cisdvec_to_amplitudes(hr_cisd, nmo, nocc)
     trdip = overlap(lamda_cisd, hr_cisd, nmo, nocc)
 
     myci = CISD(mycc._scf)
-    dm1 = trans_rdm1(myci, lamda_cisd, vec2)
+    dm1 = trans_rdm1(myci, lamda_cisd, vec3, nmo=nmo, nocc=nocc)
     fov, foo, fvv = imds.Fov, imds.Foo, imds.Fvv
     fvo = fov.T
     dipole1 = np.concatenate([foo, fov], axis=1)
     dipole2 = np.concatenate([fvo, fvv], axis=1)
     dipole = np.concatenate([dipole1, dipole2], axis=0)
-    trdm = np.einsum("ij,ij->", dm1, dipole)
-    print("CCSD: ", trdm)
-    return trdip
+    trdip2 = np.einsum("ij,ij->", dm1, dipole)
+    return trdip, trdip2
 
 
 def run_eomee():
@@ -35,7 +41,7 @@ def run_eomee():
     mol = gto.Mole()
     mol.verbose = 5
     mol.unit = 'A'
-    mol.atom = 'O 0 0 0; O 0 0 1.2'
+    mol.atom = 'Li 0 0 0; Li 0 0 1.2'
     mol.basis = 'sto-3g'
     mol.build()
     
@@ -67,7 +73,7 @@ def run_eomee():
     #eris = fill_zero(eris, nocc, nmo)
     imds = eom_cc.make_imds(eris)
     print(r1, len(r2))
-    r2 = (r2[0] + r2[1]) / 2
+    #r2 = (r2[0] + r2[1]) / 2
     return mycc, imds, t1, t2, l1, l2, r1, r2
 
 
@@ -76,7 +82,7 @@ def cisd():
     mol = gto.Mole()
     mol.verbose = 5
     mol.unit = 'A'
-    mol.atom = 'O 0 0 0; O 0 0 1.2'
+    mol.atom = 'Li 0 0 0; Li 0 0 1.2'
     mol.basis = 'sto-3g'
     mol.build()
     
@@ -90,8 +96,17 @@ def cisd():
 
     dm1 = trans_rdm1(myci, cs[0], cs[1])
     dipole = mol.intor("int1e_r", comp=3)[0]
-    trdm = np.einsum("ij,ij->", dm1, dipole)
-    print("CISD: ", trdm)
+    trdip = np.einsum("ij,ij->", dm1, dipole)
+    print("CISD: ", trdip)
+
+    f = FCI(mf)
+    f.nroots = 2
+    e, c = f.kernel()
+    dm1 = fci_trans_rdm1(c[0], c[1], mf.mo_coeff.shape[1], mf.mol.nelectron)
+
+    dipole = mol.intor("int1e_r", comp=3)[0]
+    trdip = np.einsum("ij,ij->", dm1, dipole)
+    print("FCI: ", trdip)
     return
 
 
@@ -109,6 +124,8 @@ def fill_zero(eris, o, nmo):
 
 if __name__ == "__main__":
     mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee()
-    get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
+    trdip = get_transition_dipole(mycc, imds, t1, t2, l1, l2, r1, r2)
 
     cisd()
+
+    print("CCSD: ", trdip)

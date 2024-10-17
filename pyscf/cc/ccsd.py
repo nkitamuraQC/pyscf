@@ -667,6 +667,7 @@ def amplitudes_to_vector(t1, t2, out=None):
     return vector
 
 def vector_to_amplitudes(vector, nmo, nocc):
+    print(vector.shape, nmo, nocc)
     nvir = nmo - nocc
     nov = nocc * nvir
     t1 = vector[:nov].copy().reshape((nocc,nvir))
