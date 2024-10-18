@@ -139,7 +139,7 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
-    mol.atom = 'Cl 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'Cl 0 0 0; H 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
