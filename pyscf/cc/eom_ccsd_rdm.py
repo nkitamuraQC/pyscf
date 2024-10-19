@@ -92,8 +92,11 @@ if __name__ == "__main__":
         mf.scf()
     
         mytd = tdscf.TDRHF(mf)
+        # mytd.singlet = False
         mytd.kernel()
+        mytd.verbose = 4
         trdip_td = mytd.transition_dipole()[0]
+        mytd.analyze()
     
         myci = ci.CISD(mf)
         myci.nroots = 2
@@ -127,7 +130,7 @@ if __name__ == "__main__":
     mol.verbose = 0
     mol.unit = 'A'
     #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'Cl 0 0 0; H 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
