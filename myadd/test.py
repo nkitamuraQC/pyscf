@@ -19,7 +19,7 @@ def benchmark(mol):
     es, cs = myci.kernel()
 
     dm1 = ci.cisd.trans_rdm1(myci, cs[0], cs[1])
-    dipole = mol.intor("int1e_r", comp=3)
+    dipole = mol.intor_symmetric("int1e_r", comp=3)
     dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
     trdip_cisd = np.einsum("ij,xij->x", dm1, dipole) * 2
     return trdip_tddft, trdip_cisd
