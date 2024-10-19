@@ -126,7 +126,7 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
-    mol.atom = 'S 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
+    mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
     #mol.atom = 'Li 0 0 0; Li 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
@@ -138,8 +138,12 @@ if __name__ == "__main__":
     trdip_cc = np.einsum("xij,ij->x", dip, dm1) * 2
 
     trdip_td, trdip_ci = benchmark(mol)
-    
+    print("######################")
     for dir in [0, 1, 2]:
         print(f"CCSD: {dir}", trdip_cc[dir])
         print(f"CISD: {dir}", trdip_ci[dir])
         print(f"TDDFT: {dir}", trdip_td[dir])
+        print("######################")
+    print(np.argsort(trdip_cc))
+    print(np.argsort(trdip_ci))
+    print(np.argsort(trdip_td))
