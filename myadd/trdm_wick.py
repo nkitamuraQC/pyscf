@@ -89,10 +89,11 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
-    mol.atom = 'Li 0 0 0; Li 0 0 1.0'
+    mol.atom = 'S 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
+    #mol.atom = 'Li 0 0 0; Li 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
-    mol.basis = 'def2-svp'
+    mol.basis = '6-31g'
     mol.build()
     for dir in [0, 1, 2]:
         mycc, dip, t1, t2, l1, l2, r1, r2 = run_eomee2(mol, dir=dir)
