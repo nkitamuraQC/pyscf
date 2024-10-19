@@ -84,8 +84,25 @@ def get_vo(mycc, t1, t2, l1, l2, r1, r2):
 
 
 if __name__ == "__main__":
-    from pyscf import gto, scf, ci
-    from myadd.trdipole_exp import cisd, run_eomee2
+    from pyscf import gto, scf, ci, cc, tdscf
+
+    def run_eomee(mol):
+        mf = scf.RHF(mol)
+        mf.verbose = 0
+        mf.scf()
+        mycc = cc.RCCSD(mf)
+        mycc.verbose = 0
+        mycc.ccsd()
+        t1, t2 = mycc.t1, mycc.t2
+        l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
+        eee, cee = mycc.eeccsd(nroots=1)
+        eom_cc = cc.eom_rccsd.EOMEETriplet(mycc)
+        r1, r2 = eom_cc.vector_to_amplitudes(cee)
+        r2 = (r2[0] + r2[1]) / 2
+        dipole = mol.intor_symmetric("int1e_r", comp=3)
+        dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
+        return mycc, dipole, t1, t2, l1, l2, r1, r2
+
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
