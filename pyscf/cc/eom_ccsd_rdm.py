@@ -86,6 +86,26 @@ def get_vo(mycc, t1, t2, l1, l2, r1, r2):
 if __name__ == "__main__":
     from pyscf import gto, scf, ci, cc, tdscf
 
+    def benchmark(mol):
+        mf = scf.RHF(mol)
+        mf.verbose = 0
+        mf.scf()
+    
+        mytd = tdscf.TDRHF(mf)
+        mytd.kernel()
+        trdip_td = mytd.transition_dipole()[0]
+    
+        myci = ci.CISD(mf)
+        myci.nroots = 2
+        es, cs = myci.kernel()
+    
+        dm1 = ci.cisd.trans_rdm1(myci, cs[0], cs[1])
+        dipole = mol.intor_symmetric("int1e_r", comp=3)
+        dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
+        trdip_ci = np.einsum("ij,xij->x", dm1, dipole) * 2
+        return trdip_td, trdip_ci
+
+
     def run_eomee(mol):
         mf = scf.RHF(mol)
         mf.verbose = 0
@@ -100,7 +120,7 @@ if __name__ == "__main__":
         r1, r2 = eom_cc.vector_to_amplitudes(cee)
         r2 = (r2[0] + r2[1]) / 2
         dipole = mol.intor_symmetric("int1e_r", comp=3)
-        dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
+        dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
         return mycc, dipole, t1, t2, l1, l2, r1, r2
 
     mol = gto.Mole()
@@ -112,11 +132,14 @@ if __name__ == "__main__":
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = '6-31g'
     mol.build()
+
+    mycc, dip, t1, t2, l1, l2, r1, r2 = run_eomee(mol)
+    dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
+    trdip_cc = np.einsum("xij,ij->x", dip, dm1) * 2
+
+    trdip_td, trdip_ci = benchmark(mol)
+    
     for dir in [0, 1, 2]:
-        mycc, dip, t1, t2, l1, l2, r1, r2 = run_eomee2(mol, dir=dir)
-        dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
-        trdip = np.einsum("ij,ij->", dip, dm1) * 2
-
-        cisd(mol, dir=dir)
-
-        print(f"CCSD: {dir}", trdip)
+        print(f"CCSD: {dir}", trdip_cc[dir])
+        print(f"CISD: {dir}", trdip_ci[dir])
+        print(f"TDDFT: {dir}", trdip_td[dir])
