@@ -86,9 +86,54 @@ def run_eomee(mol, dir=1):
     #r2 = (r2[0] + r2[1]) / 2
     return mycc, imds_dip, t1, t2, l1, l2, r1, r2
 
+def run_eomee2(mol, dir=1):
+    from pyscf import gto, scf, cc, tdscf
+    
+    mf = scf.RHF(mol)
+    mf.verbose = 0
+    mf.scf()
+    mytd = tdscf.TDDFT(mf)
+    mytd.kernel()
+    trdip = mytd.transition_dipole()
+    
+    mycc = cc.RCCSD(mf)
+    mycc.verbose = 0
+    mycc.ccsd()
+    t1, t2 = mycc.t1, mycc.t2
+
+    l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
+    
+    eip,cip = mycc.ipccsd(nroots=1)
+    eea,cea = mycc.eaccsd(nroots=1)
+    eee,cee = mycc.eeccsd(nroots=1)
+
+    eom_cc = EOMEETriplet(mycc)
+    #eom_cc = EOMEESinglet(mycc)
+    r1, r2 = eom_cc.vector_to_amplitudes(cee)
+    #r1, r2 = eom_cc.vector_to_amplitudes(cee[2])
+
+    r2 = (r2[0] + r2[1]) / 2
+
+    dipole = mol.intor_symmetric("int1e_r", comp=3)[dir]
+
+    nmo = mycc._scf.mo_coeff.shape[1]
+    nocc = mycc._scf.mol.nelectron // 2
+
+    eris = mycc.ao2mo(mo_coeff=np.zeros((nmo, nmo)))
+    #eris = mycc.ao2mo()
+    dipole = np.einsum("ij,ia,jb->ab", dipole, mf.mo_coeff, mf.mo_coeff)
+    #eris = fill_zero(eris, nocc, nmo)
+    imds_dip = eom_cc.make_imds(eris)
+    #imds_dip.Foo = eris.fock[:nocc, :nocc]
+    #imds_dip.Fov = eris.fock[:nocc, nocc:]
+    #imds_dip.Fvv = eris.fock[nocc:, nocc:]
+    #print(r1, len(r2))
+    #r2 = (r2[0] + r2[1]) / 2
+    return mycc, dipole, t1, t2, l1, l2, r1, r2
+
 
 def cisd(mol, dir=1):
-    from pyscf import gto, scf, cc, tdscf
+    from pyscf import gto, scf, cc, tdscf, ci
     mf = scf.RHF(mol)
     mf.verbose = 0
     mf.scf()
