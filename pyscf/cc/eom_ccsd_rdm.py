@@ -103,9 +103,12 @@ if __name__ == "__main__":
         es, cs = myci.kernel()
     
         dm1 = ci.cisd.trans_rdm1(myci, cs[0], cs[1])
-        dipole = mol.intor_symmetric("int1e_r", comp=3)
-        dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
-        trdip_ci = np.einsum("ji,xij->x", dm1, dipole) * 2
+        t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, dm1, mf.mo_coeff.conj())
+
+        charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
+                         / mol.atom_charges().sum())
+        with mol.with_common_origin(charge_center):
+            trdip_ci = np.einsum('xij,ji->x', mol.intor('int1e_r'), t_dm1)
         return trdip_td, trdip_ci
 
 
@@ -124,21 +127,27 @@ if __name__ == "__main__":
         r2 = (r2[0] + r2[1]) / 2
         dipole = mol.intor_symmetric("int1e_r", comp=3)
         dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
-        return mycc, dipole, t1, t2, l1, l2, r1, r2
+        
+        return mycc, dipole, mf, t1, t2, l1, l2, r1, r2
 
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
     #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'Cl 0 0 0; H 0 0 1.0'
+    mol.atom = 'Li 0 0 0; F 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
     mol.build()
 
-    mycc, dip, t1, t2, l1, l2, r1, r2 = run_eomee(mol)
-    dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
-    trdip_cc = np.einsum("xij,ji->x", dip, dm1) * 2
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol)
+    t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
+    t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
+
+    charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
+                     / mol.atom_charges().sum())
+    with mol.with_common_origin(charge_center):
+        trdip_cc = np.einsum('xij,ji->x', mol.intor('int1e_r'), t_dm1)
 
     trdip_td, trdip_ci = benchmark(mol)
     print("######################")
