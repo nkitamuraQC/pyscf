@@ -134,7 +134,7 @@ if __name__ == "__main__":
     mol.verbose = 0
     mol.unit = 'A'
     #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'Li 0 0 0; F 0 0 1.0'
+    mol.atom = 'H 0 0 0; Br 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
