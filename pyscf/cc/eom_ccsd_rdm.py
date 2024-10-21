@@ -122,6 +122,7 @@ if __name__ == "__main__":
         t1, t2 = mycc.t1, mycc.t2
         l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
         eee, cee = mycc.eeccsd(nroots=1)
+        print(cee)
         eom_cc = cc.eom_rccsd.EOMEETriplet(mycc)
         r1, r2 = eom_cc.vector_to_amplitudes(cee)
         r2 = (r2[0] + r2[1]) / 2
@@ -134,7 +135,7 @@ if __name__ == "__main__":
     mol.verbose = 0
     mol.unit = 'A'
     #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'H 0 0 0; Br 0 0 1.0'
+    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
