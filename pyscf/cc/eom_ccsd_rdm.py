@@ -150,7 +150,7 @@ if __name__ == "__main__":
     mol.basis = 'def2-svp'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=2)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=0)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
