@@ -136,10 +136,10 @@ if __name__ == "__main__":
     mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
-    mol.basis = 'def2-svp'
+    mol.basis = 'sto-3g'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=1)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=2)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
