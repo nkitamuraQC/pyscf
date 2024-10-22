@@ -112,7 +112,7 @@ if __name__ == "__main__":
         return trdip_td, trdip_ci
 
 
-    def run_eomee(mol):
+    def run_eomee(mol, root=0):
         mf = scf.RHF(mol)
         mf.verbose = 0
         mf.scf()
@@ -122,8 +122,8 @@ if __name__ == "__main__":
         t1, t2 = mycc.t1, mycc.t2
         l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
         eom_cc = cc.eom_rccsd.EOMEESinglet(mycc)
-        e, c = cc.eom_rccsd.eomee_ccsd_singlet(eom_cc)
-        r1, r2 = eom_cc.vector_to_amplitudes(c)
+        e, c = cc.eom_rccsd.eomee_ccsd_singlet(eom_cc, nroots=5)
+        r1, r2 = eom_cc.vector_to_amplitudes(c[root])
         dipole = mol.intor_symmetric("int1e_r", comp=3)
         dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
         
@@ -132,21 +132,21 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.unit = 'A'
-    #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
+    #mol.atom = 'S 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
     mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=1)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
     charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
                      / mol.atom_charges().sum())
-    with mol.with_common_origin(charge_center):
-        trdip_cc = np.einsum('xij,ji->x', mol.intor('int1e_r'), t_dm1)
+    #with mol.with_common_origin(charge_center):
+    trdip_cc = np.einsum('xij,ij->x', mol.intor('int1e_r'), t_dm1) * 2
 
     trdip_td, trdip_ci = benchmark(mol)
     print("######################")
