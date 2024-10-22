@@ -158,3 +158,7 @@ if __name__ == "__main__":
     print(np.argsort(trdip_cc))
     print(np.argsort(trdip_ci))
     print(np.argsort(trdip_td))
+    print("######################")
+    print(np.argsort(np.abs(trdip_cc)))
+    print(np.argsort(np.abs(trdip_ci)))
+    print(np.argsort(np.abs(trdip_td)))
