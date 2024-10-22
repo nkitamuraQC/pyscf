@@ -1,5 +1,6 @@
 from numpy import einsum
 import numpy as np
+from pyscf.cc.ccsd_rdm import make_rdm1
 
 def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     nocc = mycc._scf.mol.nelectron // 2
@@ -14,6 +15,7 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     dm1[:nocc, nocc:] = ov
     dm1[nocc:, :nocc] = vo
     dm1[nocc:, nocc:] = vv
+    #dm1 += make_rdm1(mycc, t1, t2, l1, l2)
     return dm1
 
 def get_ov(mycc, t1, t2, l1, l2, r1, r2):
@@ -143,11 +145,11 @@ if __name__ == "__main__":
 
     mol = gto.Mole()
     mol.verbose = 0
-    #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
+    #mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3; H 0 0 4; H 0 0 5;'
     #mol.atom = 'Kr 0 0 0;'
-    mol.basis = 'def2-svp'
+    mol.basis = 'sto-3g'
     mol.build()
 
     mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=0)
@@ -157,7 +159,7 @@ if __name__ == "__main__":
     charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
                      / mol.atom_charges().sum())
     with mol.with_common_origin(charge_center):
-        trdip_cc = np.einsum('xij,ji->x', mol.intor_symmetric('int1e_r'), t_dm1) 
+        trdip_cc = np.einsum('xij,ji->x', mol.intor_symmetric('int1e_r'), t_dm1)
 
     trdip_td, trdip_ci, trdip_fci = benchmark(mol, do_fci=False)
     print("######################")
