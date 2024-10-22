@@ -84,7 +84,7 @@ def get_vo(mycc, t1, t2, l1, l2, r1, r2):
 if __name__ == "__main__":
     from pyscf import gto, scf, ci, cc, tdscf, fci
 
-    def benchmark(mol, do_fci=False):
+    def benchmark(mol, do_fci=False, root=2):
         mf = scf.RHF(mol)
         mf.verbose = 0
         mf.scf()
@@ -97,24 +97,24 @@ if __name__ == "__main__":
         mytd.analyze()
     
         myci = ci.CISD(mf)
-        myci.nroots = 2
+        myci.nroots = 5
         es, cs = myci.kernel()
 
         if do_fci:
             myfci = fci.FCI(mf)
-            myfci.nroots = 3
+            myfci.nroots = 5
             es_fci, cs_fci = myfci.kernel()
 
-            dm1_fci = fci.direct_spin1.trans_rdm1(cs_fci[0], cs_fci[2], mf.mo_coeff.shape[1], mf.mol.nelectron)
+            dm1_fci = fci.direct_spin1.trans_rdm1(cs_fci[0], cs_fci[root], mf.mo_coeff.shape[1], mf.mol.nelectron)
             t_dm1_fci = np.einsum('pi,ij,qj->pq', mf.mo_coeff, dm1_fci, mf.mo_coeff.conj())
     
-        dm1 = ci.cisd.trans_rdm1(myci, cs[0], cs[1])
+        dm1 = ci.cisd.trans_rdm1(myci, cs[0], cs[root])
         t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, dm1, mf.mo_coeff.conj())
 
         charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
                          / mol.atom_charges().sum())
         with mol.with_common_origin(charge_center):
-            trdip_ci = np.einsum('xij,ji->x', mol.intor('int1e_r'), t_dm1)
+            trdip_ci = np.einsum('xij,ji->x', mol.intor_symmetric('int1e_r'), t_dm1)
             if do_fci:
                 trdip_fci = np.einsum('xij,ji->x', mol.intor('int1e_r'), t_dm1_fci)
             else:
@@ -142,13 +142,13 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    #mol.atom = 'H 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3; H 0 0 4; H 0 0 5;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=0)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=2)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
@@ -157,7 +157,7 @@ if __name__ == "__main__":
     with mol.with_common_origin(charge_center):
         trdip_cc = np.einsum('xij,ji->x', mol.intor_symmetric('int1e_r'), t_dm1)
 
-    trdip_td, trdip_ci, trdip_fci = benchmark(mol, do_fci=False)
+    trdip_td, trdip_ci, trdip_fci = benchmark(mol, do_fci=False, root=3)
     print("######################")
     for dir in [0, 1, 2]:
         print(f"CCSD: {dir}", trdip_cc[dir])
