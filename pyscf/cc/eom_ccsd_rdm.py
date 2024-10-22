@@ -144,7 +144,7 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'H 0 0 0; Li 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3; H 0 0 4; H 0 0 5;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
@@ -159,7 +159,7 @@ if __name__ == "__main__":
     with mol.with_common_origin(charge_center):
         trdip_cc = np.einsum('xij,ji->x', mol.intor_symmetric('int1e_r'), t_dm1) 
 
-    trdip_td, trdip_ci, trdip_fci = benchmark(mol)
+    trdip_td, trdip_ci, trdip_fci = benchmark(mol, do_fci=True)
     print("######################")
     for dir in [0, 1, 2]:
         print(f"CCSD: {dir}", trdip_cc[dir])
