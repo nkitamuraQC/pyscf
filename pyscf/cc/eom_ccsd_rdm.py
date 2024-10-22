@@ -121,11 +121,9 @@ if __name__ == "__main__":
         mycc.ccsd()
         t1, t2 = mycc.t1, mycc.t2
         l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
-        eee, cee = mycc.eeccsd(nroots=1)
-        print(cee)
-        eom_cc = cc.eom_rccsd.EOMEETriplet(mycc)
-        r1, r2 = eom_cc.vector_to_amplitudes(cee)
-        r2 = (r2[0] + r2[1]) / 2
+        eom_cc = cc.eom_rccsd.EOMEESinglet(mycc)
+        e, c = cc.eom_rccsd.eomee_ccsd_singlet(eom_cc)
+        r1, r2 = eom_cc.vector_to_amplitudes(c)
         dipole = mol.intor_symmetric("int1e_r", comp=3)
         dipole = np.einsum("xij,ia,jb->xab", dipole, mf.mo_coeff, mf.mo_coeff)
         
