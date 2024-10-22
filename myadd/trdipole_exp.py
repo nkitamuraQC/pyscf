@@ -14,16 +14,14 @@ def get_transition_dipole(mycc, imds_dip, t1, t2, l1, l2, r1, r2):
     l2_zero = np.zeros_like(l2)
     lamda_cisd = amplitudes_to_cisdvec(l0, l1, l2)
     #lamda_cisd = amplitudes_to_cisdvec(l0, l1_zero, l2_zero)
-    eom_cc = EOMEETriplet(mycc)
-    #eom_cc = EOMEESinglet(mycc)
+    #eom_cc = EOMEETriplet(mycc)
+    eom_cc = EOMEESinglet(mycc)
     #matvec, _ = eom_cc.gen_matvec(imds=imds)
     vec = eom_cc.amplitudes_to_vector(r1, r2)
     vec_r = vec
-    vec = eeccsd_matvec_triplet(eom_cc, vec, imds)
+    vec = eeccsd_matvec_singlet(eom_cc, vec, imds)
     hr1, hr2 = eom_cc.vector_to_amplitudes(vec)
     vec1, vec2 = eom_cc.vector_to_amplitudes(vec_r)
-    hr2 = (hr2[0] + hr2[1]) / 2
-    vec2 = (vec2[0] + vec2[1]) / 2
     hr_cisd = amplitudes_to_cisdvec(r0, hr1, hr2)
     vec3 = amplitudes_to_cisdvec(r0, vec1, vec2)
     nmo = mycc._scf.mo_coeff.shape[1]
@@ -39,7 +37,7 @@ def get_transition_dipole(mycc, imds_dip, t1, t2, l1, l2, r1, r2):
     dipole1 = np.concatenate([foo, fov], axis=1)
     dipole2 = np.concatenate([fvo, fvv], axis=1)
     dipole = np.concatenate([dipole1, dipole2], axis=0)
-    trdip2 = np.einsum("ij,ij->", dm1, dipole) * 2
+    trdip2 = np.einsum("ij,ji->", dm1, dipole)
     return trdip, trdip2
 
 
@@ -64,12 +62,15 @@ def run_eomee(mol, dir=1):
     eea,cea = mycc.eaccsd(nroots=1)
     eee,cee = mycc.eeccsd(nroots=1)
 
-    eom_cc = EOMEETriplet(mycc)
+    eom_cc = EOMEESinglet(mycc)
+    e, c = cc.eom_rccsd.eomee_ccsd_singlet(eom_cc, nroots=5)
     #eom_cc = EOMEESinglet(mycc)
-    r1, r2 = eom_cc.vector_to_amplitudes(cee)
+    r1, r2 = eom_cc.vector_to_amplitudes(c[0])
     #r1, r2 = eom_cc.vector_to_amplitudes(cee[2])
-
-    dipole = mol.intor_symmetric("int1e_r", comp=3)[dir]
+    charge_center = (np.einsum('z,zx->x', mol.atom_charges(), mol.atom_coords())
+                     / mol.atom_charges().sum())
+    with mol.with_common_origin(charge_center):
+        dipole = mol.intor_symmetric("int1e_r", comp=3)[dir]
 
     nmo = mycc._scf.mo_coeff.shape[1]
     nocc = mycc._scf.mol.nelectron // 2
@@ -138,9 +139,11 @@ def cisd(mol, dir=1):
     mf.verbose = 0
     mf.scf()
 
-    mytd = tdscf.TDRHF(mf)
+    mytd = tdscf.TDDFT(mf)
     mytd.kernel()
     trdip = mytd.transition_dipole()
+    mytd.verbose = 4
+    mytd.analyze()
     print(f"TDSCF: {dir}", trdip[0, dir])
 
     myci = ci.CISD(mf)
@@ -187,7 +190,7 @@ if __name__ == "__main__":
     mol.atom = 'Cl 0 0 0; H 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3;'
     #mol.atom = 'Kr 0 0 0;'
-    mol.basis = 'def2-svp'
+    mol.basis = 'sto-3g'
     mol.build()
     for dir in [0, 1, 2]:
         mycc, imds, t1, t2, l1, l2, r1, r2 = run_eomee(mol, dir=dir)
@@ -195,4 +198,4 @@ if __name__ == "__main__":
 
         cisd(mol, dir=dir)
 
-        print(f"CCSD: {dir}", trdip[1])
+        print(f"CCSD: {dir}", trdip[0], trdip[1])
