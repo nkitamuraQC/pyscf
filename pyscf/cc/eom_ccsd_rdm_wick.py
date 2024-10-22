@@ -5,31 +5,10 @@ from pyscf.cc.ccsd_rdm import make_rdm1
 def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
-    t1a  = t1
-    t2ab = np.copy(t2)
-    t2aa = np.copy(t2) \
-         - t2.transpose(0,1,3,2)
-
-    l1a  = l1
-    l2ab = 2*np.copy(l2)
-    l2aa = np.copy(l2) \
-         - l2.transpose(0,1,3,2)
-    
-    r1a  = r1
-    r2ab = 2*np.copy(r2)
-    r2aa = np.copy(r2) \
-         - r2.transpose(0,1,3,2)
-    
-    r1 = r1a.T
-    r2ab = r2ab.transpose(2,3,0,1)
-    r2aa = r2aa.transpose(2,3,0,1)
-    t1 = t1a.T
-    t2ab = t2ab.transpose(2,3,0,1)
-    t2aa = t2aa.transpose(2,3,0,1)
-
-    t2 = [t2aa, t2ab]
-    l2 = [l2aa, l2ab]
-    r2 = [r2aa, r2ab]
+    r1 = r1.T
+    r2 = r2.transpose(2,3,0,1)
+    t1 = t1.T
+    t2 = t2.transpose(2,3,0,1)
 
     nvir = nmo - nocc 
     ov = get_ov(mycc, t1, t2, l1, l2, r1, r2)
@@ -45,56 +24,40 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     return dm1
 
 def get_ov(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     ov = np.zeros((nocc, nvir), dtype=float)
-    ov += -1.0*einsum('ijab,aj->ib', l2aa, r1) * 2
-    return ov * 0.5
+    ov += -1.0*einsum('ijab,aj->ib', l2, r1)
+    return ov
 
 
 def get_vv(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     vv = np.zeros((nvir, nvir), dtype=float)
     delta = np.identity(nvir)
-    vv += 1.0*einsum('ib,ai->ab', l1, t1) * 2
-    vv += -0.5*einsum('ijcb,caji->ab', l2aa, r2aa)
-    vv += -0.5*einsum('ijcb,caji->ab', l2ab, r2ab)
-    vv += -1.0*einsum('ijcb,ai,cj->ab', l2aa, t1, r1)
-    vv += -1.0*einsum('ijcb,ai,cj->ab', l2ab, t1, r1)
+    vv += 1.0*einsum('ib,ai->ab', l1, t1)
+    vv += -0.5*einsum('ijcb,caji->ab', l2, r2)
+    vv += -1.0*einsum('ijcb,ai,cj->ab', l2, t1, r1)
     
-    return vv * 0.5
+    return vv
 
 
 def get_oo(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     oo = np.zeros((nocc, nocc), dtype=float)
     delta = np.identity(nocc)
-    oo += -1.0*einsum('ia,aj->ij', l1, r1) * 2
-    oo += 0.5*einsum('ikab,bajk->ij', l2ab, r2ab)
-    oo += 0.5*einsum('ikab,bajk->ij', l2aa, r2aa)
-    oo += 1.0*einsum('ikab,bj,ak->ij', l2aa, t1, r1)
-    oo += 1.0*einsum('ikab,bj,ak->ij', l2ab, t1, r1)
-    return oo * 0.5
+    oo += -1.0*einsum('ia,aj->ij', l1, r1)
+    oo += 0.5*einsum('ikab,bajk->ij', l2, r2)
+    oo += 1.0*einsum('ikab,bj,ak->ij', l2, t1, r1)
+    return oo
 
 
 def get_vo(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
@@ -102,27 +65,20 @@ def get_vo(mycc, t1, t2, l1, l2, r1, r2):
     delta_o = np.identity(nocc)
     delta_v = np.identity(nvir)
     vo += 1.0*einsum('ai->ai', r1)
-    vo += -1.0*einsum('jb,baij->ai', l1, r2aa)
-    vo += -1.0*einsum('jb,baij->ai', l1, r2ab)
-    vo += -1.0*einsum('jb,bi,aj->ai', l1, t1, r1) * 2
-    vo += -1.0*einsum('jb,aj,bi->ai', l1, t1, r1) * 2
-    vo += 1.0*einsum('jb,ai,bj->ai', l1, t1, r1) * 2
-    vo += 0.5*einsum('jkbc,ci,bakj->ai', l2aa, t1, r2aa)
-    vo += 0.5*einsum('jkbc,ci,bakj->ai', l2ab, t1, r2ab)
-    vo += 0.5*einsum('jkbc,aj,cbik->ai', l2aa, t1, r2aa)
-    vo += 0.5*einsum('jkbc,aj,cbik->ai', l2ab, t1, r2ab)
-    vo += 0.25*einsum('jkbc,ai,cbkj->ai', l2aa, t1, r2aa)
-    vo += 0.25*einsum('jkbc,ai,cbkj->ai', l2ab, t1, r2ab)
-    vo += -0.5*einsum('jkbc,cbij,ak->ai', l2aa, t2aa, r1)
-    vo += -0.5*einsum('jkbc,cbij,ak->ai', l2ab, t2ab, r1)
-    vo += -0.5*einsum('jkbc,cakj,bi->ai', l2aa, t2aa, r1)
-    vo += -0.5*einsum('jkbc,cakj,bi->ai', l2ab, t2ab, r1)
-    vo += 1.0*einsum('jkbc,caij,bk->ai', l2aa, t2aa, r1)
-    vo += 1.0*einsum('jkbc,caij,bk->ai', l2ab, t2ab, r1)
-    vo += 1.0*einsum('jkbc,aj,ci,bk->ai', l2aa, t1, t1, r1)
-    vo += 1.0*einsum('jkbc,aj,ci,bk->ai', l2ab, t1, t1, r1)
+    vo += -1.0*einsum('jb,baij->ai', l1, r2)
+    vo += -1.0*einsum('jb,bi,aj->ai', l1, t1, r1)
+    vo += -1.0*einsum('jb,aj,bi->ai', l1, t1, r1)
+    vo += 1.0*einsum('jb,ai,bj->ai', l1, t1, r1)
+    vo += 0.5*einsum('jkbc,ci,bakj->ai', l2, t1, r2)
+    vo += 0.5*einsum('jkbc,aj,cbik->ai', l2, t1, r2)
+    vo += 0.25*einsum('jkbc,ai,cbkj->ai', l2, t1, r2)
+    vo += -0.5*einsum('jkbc,cbij,ak->ai', l2, t2, r1)
+    vo += -0.5*einsum('jkbc,cakj,bi->ai', l2, t2, r1)
+    vo += 1.0*einsum('jkbc,caij,bk->ai', l2, t2, r1)
+    vo += 1.0*einsum('jkbc,aj,ci,bk->ai', l2, t1, t1, r1)
     
-    return vo * 0.5
+    
+    return vo
 
 
 if __name__ == "__main__":
