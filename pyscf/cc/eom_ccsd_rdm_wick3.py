@@ -1,24 +1,21 @@
 from numpy import einsum
 import numpy as np
-from pyscf.cc.ccsd_rdm import make_rdm1
+from pyscf.cc.ccsd_rdm import make_rdm1, _make_rdm1
 
 def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     t1a  = t1
     t2ab = np.copy(t2)
-    t2aa = np.copy(t2) \
-         - t2.transpose(0,1,3,2)
+    t2aa = np.copy(t2) - t2.transpose(0,1,3,2)
 
     l1a  = l1
-    l2ab = 2*np.copy(l2)
-    l2aa = np.copy(l2) \
-         - l2.transpose(0,1,3,2)
+    l2ab = np.copy(l2)
+    l2aa = np.copy(l2) - l2.transpose(0,1,3,2)
     
     r1a  = r1
-    r2ab = 2*np.copy(r2)
-    r2aa = np.copy(r2) \
-         - r2.transpose(0,1,3,2)
+    r2ab = np.copy(r2)
+    r2aa = np.copy(r2) - r2.transpose(0,1,3,2)
     
     r1 = r1a.T
     r2ab = r2ab.transpose(2,3,0,1)
@@ -36,79 +33,156 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     vv = get_vv(mycc, t1, t2, l1, l2, r1, r2)
     oo = get_oo(mycc, t1, t2, l1, l2, r1, r2)
     vo = get_vo(mycc, t1, t2, l1, l2, r1, r2)
-    dm1 = np.zeros((nmo, nmo), dtype=float)
-    dm1[:nocc, :nocc] = oo + oo.T
-    dm1[:nocc, nocc:] = ov + vo.T
-    dm1[nocc:, :nocc] = vo + ov.T
-    dm1[nocc:, nocc:] = vv + vv.T
-    #dm1 += make_rdm1(mycc, t1, t2, l1, l2)
+    #dm1 = np.zeros((nmo, nmo), dtype=float)
+    #dm1[:nocc, :nocc] = oo + oo.T
+    #dm1[:nocc, nocc:] = ov + vo.T
+    #dm1[nocc:, :nocc] = vo + ov.T
+    #dm1[nocc:, nocc:] = vv + vv.T
+    dm1 = _make_rdm1(mycc, [oo, ov, vo, vv])
     return dm1
 
 def get_ov(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
+    T, U = t2
+    L, M = l2
+    R, S = r2
+    t = t1
+    l = l1
+    r = r1
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     ov = np.zeros((nocc, nvir), dtype=float)
-    ov += -1.0*einsum('ijab,aj->ib', l2, r1)
+    ov += -9.0*einsum('ijab,aj->ib', L, r)
+    ov += -1.0*einsum('ijab,aj->ib', M, r)
     return ov
 
 
 def get_vv(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
+    T, U = t2
+    L, M = l2
+    R, S = r2
+    t = t1
+    l = l1
+    r = r1
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     vv = np.zeros((nvir, nvir), dtype=float)
-    delta = np.identity(nvir)
-    vv += 1.0*einsum('ib,ai->ab', l1, t1)
-    vv += -0.5*einsum('ijcb,caji->ab', l2, r2)
-    vv += -1.0*einsum('ijcb,ai,cj->ab', l2, t1, r1)
+    vv += 1.0*einsum('ib,ai->ab', l, r)
+    vv += -40.5*einsum('ijcb,caji->ab', L, R)
+    vv += -4.5*einsum('ijcb,caji->ab', L, S)
+    vv += -4.5*einsum('ijcb,caji->ab', M, R)
+    vv += -0.5*einsum('ijcb,caji->ab', M, S)
+    vv += -0.5*einsum('ijbA,aAji->ab', M, S)
+    vv += 1.0*einsum('iIcb,caiI->ab', M, S)
+    vv += 1.0*einsum('iIbA,aAiI->ab', M, S)
+    vv += -0.5*einsum('IJcb,caJI->ab', M, S)
+    vv += -0.5*einsum('IJbA,aAJI->ab', M, S)
+    vv += -9.0*einsum('ijcb,ai,cj->ab', L, t, r)
+    vv += -1.0*einsum('ijcb,ai,cj->ab', M, t, r)
     
     return vv
 
 
 def get_oo(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
+    T, U = t2
+    L, M = l2
+    R, S = r2
+    t = t1
+    l = l1
+    r = r1
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     oo = np.zeros((nocc, nocc), dtype=float)
-    delta = np.identity(nocc)
-    oo += -1.0*einsum('ia,aj->ij', l1, r1)
-    oo += 0.5*einsum('ikab,bajk->ij', l2, r2)
-    oo += 1.0*einsum('ikab,bj,ak->ij', l2, t1, r1)
+    oo += -1.0*einsum('ia,aj->ij', l, r)
+    oo += 40.5*einsum('ikab,bajk->ij', L, R)
+    oo += 4.5*einsum('ikab,bajk->ij', L, S)
+    oo += 4.5*einsum('ikab,bajk->ij', M, R)
+    oo += 0.5*einsum('ikab,bajk->ij', M, S)
+    oo += -1.0*einsum('ikaA,aAjk->ij', M, S)
+    oo += 0.5*einsum('ikAB,BAjk->ij', M, S)
+    oo += 0.5*einsum('iIab,bajI->ij', M, S)
+    oo += -1.0*einsum('iIaA,aAjI->ij', M, S)
+    oo += 0.5*einsum('iIAB,BAjI->ij', M, S)
+    oo += 9.0*einsum('ikab,bj,ak->ij', L, t, r)
+    oo += 1.0*einsum('ikab,bj,ak->ij', M, t, r)
     return oo
 
 
 def get_vo(mycc, t1, t2, l1, l2, r1, r2):
-    t2aa, t2ab = t2
-    l2aa, l2ab = l2
-    r2aa, r2ab = r2
+    T, U = t2
+    L, M = l2
+    R, S = r2
+    t = t1
+    l = l1
+    r = r1
     nocc = mycc._scf.mol.nelectron // 2
     nmo = mycc._scf.mo_coeff.shape[1]
     nvir = nmo - nocc 
     vo = np.zeros((nvir, nocc), dtype=float)
-    delta_o = np.identity(nocc)
-    delta_v = np.identity(nvir)
-    vo += 1.0*einsum('ai->ai', r1)
-    vo += -1.0*einsum('jb,baij->ai', l1, r2)
-    vo += -1.0*einsum('jb,bi,aj->ai', l1, t1, r1)
-    vo += -1.0*einsum('jb,aj,bi->ai', l1, t1, r1)
-    vo += 1.0*einsum('jb,ai,bj->ai', l1, t1, r1)
-    vo += 0.5*einsum('jkbc,ci,bakj->ai', l2, t1, r2)
-    vo += 0.5*einsum('jkbc,aj,cbik->ai', l2, t1, r2)
-    vo += 0.25*einsum('jkbc,ai,cbkj->ai', l2, t1, r2)
-    vo += -0.5*einsum('jkbc,cbij,ak->ai', l2, t2, r1)
-    vo += -0.5*einsum('jkbc,cakj,bi->ai', l2, t2, r1)
-    vo += 1.0*einsum('jkbc,caij,bk->ai', l2, t2, r1)
-    vo += 1.0*einsum('jkbc,aj,ci,bk->ai', l2, t1, t1, r1)
+    vo += 1.0*einsum('ai->ai', r)
+    vo += -9.0*einsum('jb,baij->ai', l, R)
+    vo += -1.0*einsum('jb,baij->ai', l, S)
+    vo += -1.0*einsum('jb,bi,aj->ai', l, t, r)
+    vo += -1.0*einsum('jb,aj,bi->ai', l, t, r)
+    vo += 1.0*einsum('jb,ai,bj->ai', l, t, r)
+    vo += 40.5*einsum('jkbc,ci,bakj->ai', L, t, R)
+    vo += 4.5*einsum('jkbc,ci,bakj->ai', L, t, S)
+    vo += 40.5*einsum('jkbc,aj,cbik->ai', L, t, R)
+    vo += 4.5*einsum('jkbc,aj,cbik->ai', L, t, S)
+    vo += 20.25*einsum('jkbc,ai,cbkj->ai', L, t, R)
+    vo += 2.25*einsum('jkbc,ai,cbkj->ai', L, t, S)
+    vo += -40.5*einsum('jkbc,cbij,ak->ai', L, T, r)
+    vo += -40.5*einsum('jkbc,cakj,bi->ai', L, T, r)
+    vo += 81.0*einsum('jkbc,caij,bk->ai', L, T, r)
+    vo += -4.5*einsum('jkbc,cbij,ak->ai', L, U, r)
+    vo += -4.5*einsum('jkbc,cakj,bi->ai', L, U, r)
+    vo += 9.0*einsum('jkbc,caij,bk->ai', L, U, r)
+    vo += 4.5*einsum('jkbc,ci,bakj->ai', M, t, R)
+    vo += 0.5*einsum('jkbc,ci,bakj->ai', M, t, S)
+    vo += 4.5*einsum('jkbc,aj,cbik->ai', M, t, R)
+    vo += 0.5*einsum('jkbc,aj,cbik->ai', M, t, S)
+    vo += 2.25*einsum('jkbc,ai,cbkj->ai', M, t, R)
+    vo += 0.25*einsum('jkbc,ai,cbkj->ai', M, t, S)
+    vo += -4.5*einsum('jkbc,cbij,ak->ai', M, T, r)
+    vo += -4.5*einsum('jkbc,cakj,bi->ai', M, T, r)
+    vo += 9.0*einsum('jkbc,caij,bk->ai', M, T, r)
+    vo += -0.5*einsum('jkbc,cbij,ak->ai', M, U, r)
+    vo += -0.5*einsum('jkbc,cakj,bi->ai', M, U, r)
+    vo += 1.0*einsum('jkbc,caij,bk->ai', M, U, r)
+    vo += 0.5*einsum('jkbA,bi,aAkj->ai', M, t, S)
+    vo += -1.0*einsum('jkbA,aj,bAik->ai', M, t, S)
+    vo += -0.5*einsum('jkbA,ai,bAkj->ai', M, t, S)
+    vo += 1.0*einsum('jkbA,bAij,ak->ai', M, U, r)
+    vo += 0.5*einsum('jkbA,aAkj,bi->ai', M, U, r)
+    vo += -1.0*einsum('jkbA,aAij,bk->ai', M, U, r)
+    vo += 0.5*einsum('jkAB,aj,BAik->ai', M, t, S)
+    vo += 0.25*einsum('jkAB,ai,BAkj->ai', M, t, S)
+    vo += -0.5*einsum('jkAB,BAij,ak->ai', M, U, r)
+    vo += -1.0*einsum('jIbc,ci,bajI->ai', M, t, S)
+    vo += 0.5*einsum('jIbc,aj,cbiI->ai', M, t, S)
+    vo += -0.5*einsum('jIbc,ai,cbjI->ai', M, t, S)
+    vo += 0.5*einsum('jIbc,cbiI,aj->ai', M, U, r)
+    vo += 1.0*einsum('jIbc,cajI,bi->ai', M, U, r)
+    vo += -1.0*einsum('jIbc,caiI,bj->ai', M, U, r)
+    vo += -1.0*einsum('jIbA,bi,aAjI->ai', M, t, S)
+    vo += -1.0*einsum('jIbA,aj,bAiI->ai', M, t, S)
+    vo += 1.0*einsum('jIbA,ai,bAjI->ai', M, t, S)
+    vo += -1.0*einsum('jIbA,bAiI,aj->ai', M, U, r)
+    vo += -1.0*einsum('jIbA,aAjI,bi->ai', M, U, r)
+    vo += 1.0*einsum('jIbA,aAiI,bj->ai', M, U, r)
+    vo += 0.5*einsum('jIAB,aj,BAiI->ai', M, t, S)
+    vo += -0.5*einsum('jIAB,ai,BAjI->ai', M, t, S)
+    vo += 0.5*einsum('jIAB,BAiI,aj->ai', M, U, r)
+    vo += 0.5*einsum('IJbc,ci,baJI->ai', M, t, S)
+    vo += 0.25*einsum('IJbc,ai,cbJI->ai', M, t, S)
+    vo += -0.5*einsum('IJbc,caJI,bi->ai', M, U, r)
+    vo += 0.5*einsum('IJbA,bi,aAJI->ai', M, t, S)
+    vo += -0.5*einsum('IJbA,ai,bAJI->ai', M, t, S)
+    vo += 0.5*einsum('IJbA,aAJI,bi->ai', M, U, r)
+    vo += 0.25*einsum('IJAB,ai,BAJI->ai', M, t, S)
+    vo += 9.0*einsum('jkbc,aj,ci,bk->ai', L, t, t, r)
     
     
     return vo
