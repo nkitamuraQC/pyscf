@@ -11,10 +11,10 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     oo = get_oo(mycc, t1, t2, l1, l2, r1, r2)
     vo = get_vo(mycc, t1, t2, l1, l2, r1, r2)
     dm1 = np.zeros((nmo, nmo), dtype=float)
-    dm1[:nocc, :nocc] = oo
-    dm1[:nocc, nocc:] = ov
-    dm1[nocc:, :nocc] = vo
-    dm1[nocc:, nocc:] = vv
+    dm1[:nocc, :nocc] = oo + oo.T
+    dm1[:nocc, nocc:] = ov + vo.T
+    dm1[nocc:, :nocc] = vo + ov.T
+    dm1[nocc:, nocc:] = vv + vv.T
     #dm1 += make_rdm1(mycc, t1, t2, l1, l2)
     return dm1
 
@@ -146,13 +146,13 @@ if __name__ == "__main__":
     mol = gto.Mole()
     mol.verbose = 0
     mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
-    #mol.atom = 'H 0 0 0; Cl 0 0 1.0'
+    mol.atom = 'H 0 0 0; Cl 0 0 1.0'
     #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3; H 0 0 4; H 0 0 5;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'sto-3g'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=0)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=2)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
