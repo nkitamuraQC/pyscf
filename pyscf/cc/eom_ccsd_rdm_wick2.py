@@ -37,10 +37,10 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     oo = get_oo(mycc, t1, t2, l1, l2, r1, r2)
     vo = get_vo(mycc, t1, t2, l1, l2, r1, r2)
     dm1 = np.zeros((nmo, nmo), dtype=float)
-    dm1[:nocc, :nocc] = oo
-    dm1[:nocc, nocc:] = ov
-    dm1[nocc:, :nocc] = vo
-    dm1[nocc:, nocc:] = vv
+    dm1[:nocc, :nocc] = oo + oo.T
+    dm1[:nocc, nocc:] = ov + vo.T
+    dm1[nocc:, :nocc] = vo + ov.T
+    dm1[nocc:, nocc:] = vv + vv.T
     #dm1 += make_rdm1(mycc, t1, t2, l1, l2)
     return dm1
 
