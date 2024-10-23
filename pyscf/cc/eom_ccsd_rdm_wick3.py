@@ -10,11 +10,11 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     t2aa = np.copy(t2) - t2.transpose(0,1,3,2)
 
     l1a  = l1
-    l2ab = np.copy(l2)
+    l2ab = np.copy(l2) * 2
     l2aa = np.copy(l2) - l2.transpose(0,1,3,2)
     
     r1a  = r1
-    r2ab = np.copy(r2)
+    r2ab = np.copy(r2) * 2
     r2aa = np.copy(r2) - r2.transpose(0,1,3,2)
     
     r1 = r1a.T
@@ -29,15 +29,15 @@ def trans_rdm1(mycc, t1, t2, l1, l2, r1, r2):
     r2 = [r2aa, r2ab]
 
     nvir = nmo - nocc 
-    ov = get_ov(mycc, t1, t2, l1, l2, r1, r2)
-    vv = get_vv(mycc, t1, t2, l1, l2, r1, r2)
-    oo = get_oo(mycc, t1, t2, l1, l2, r1, r2)
-    vo = get_vo(mycc, t1, t2, l1, l2, r1, r2)
-    #dm1 = np.zeros((nmo, nmo), dtype=float)
-    #dm1[:nocc, :nocc] = oo + oo.T
-    #dm1[:nocc, nocc:] = ov + vo.T
-    #dm1[nocc:, :nocc] = vo + ov.T
-    #dm1[nocc:, nocc:] = vv + vv.T
+    ov = get_ov(mycc, t1, t2, l1, l2, r1, r2) * 0.5
+    vv = get_vv(mycc, t1, t2, l1, l2, r1, r2) * 0.5 
+    oo = get_oo(mycc, t1, t2, l1, l2, r1, r2) * 0.5 
+    vo = get_vo(mycc, t1, t2, l1, l2, r1, r2) * 0.5 
+    dm1 = np.zeros((nmo, nmo), dtype=float)
+    dm1[:nocc, :nocc] = oo + oo.T
+    dm1[:nocc, nocc:] = ov + vo.T
+    dm1[nocc:, :nocc] = vo + ov.T
+    dm1[nocc:, nocc:] = vv + vv.T
     dm1 = _make_rdm1(mycc, [oo, ov, vo, vv])
     return dm1
 
@@ -248,14 +248,14 @@ if __name__ == "__main__":
 
     mol = gto.Mole()
     mol.verbose = 0
-    mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
+    #mol.atom = 'O 0 0 0; H 0.958 0.0 0.0; H 0.240 0.927 0.0;'
     mol.atom = 'H 0 0 0; Cl 0 0 1.0'
-    #mol.atom = 'H 0 0 0; H 0 0 1.0; H 0 0 2; H 0 0 3; H 0 0 4; H 0 0 5;'
+    #mol.atom = 'Li 0 0 0; H 0 0 1.0;'
     #mol.atom = 'Kr 0 0 0;'
     mol.basis = 'def2-svp'
     mol.build()
 
-    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=2)
+    mycc, dip, mf, t1, t2, l1, l2, r1, r2 = run_eomee(mol, root=0)
     t_dm1 = trans_rdm1(mycc, t1, t2, l1, l2, r1, r2)
     t_dm1 = np.einsum('pi,ij,qj->pq', mf.mo_coeff, t_dm1, mf.mo_coeff.conj())
 
