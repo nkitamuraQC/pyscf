@@ -29,7 +29,7 @@ def make_rdm1(mycc, t1, t2, l1, l2):
     dm1[nocc:, :nocc] = vo
     dm1[nocc:, nocc:] = vv
     #dm1 += make_rdm1(mycc, t1, t2, l1, l2)
-    return dm1
+    return oo, ov, vo, vv
 
 def get_ov(mycc, t1, t2, l1, l2):
     T, U = t2
@@ -129,7 +129,7 @@ def get_vo(mycc, t1, t2, l1, l2):
 
 if __name__ == "__main__":
     from pyscf import gto, scf, ci, cc, tdscf, fci
-    from pyscf.cc.ccsd_rdm_slow import _gamma1_intermediates
+    from pyscf.cc.ccsd_rdm import _gamma1_intermediates, _make_rdm1
     def run_ccsd(mol, root=0):
         mf = scf.RHF(mol)
         mf.verbose = 0
@@ -140,18 +140,15 @@ if __name__ == "__main__":
         t1, t2 = mycc.t1, mycc.t2
         l1, l2 = mycc.solve_lambda(t1=t1, t2=t2)
         doo, dov, dvo, dvv = _gamma1_intermediates(mycc, t1, t2, l1, l2)
-        nocc = mycc._scf.mol.nelectron // 2
-        nmo = mycc._scf.mo_coeff.shape[1]
-        dm1 = np.zeros((nmo, nmo), dtype=float)
-        dm1[:nocc, :nocc] = doo
-        dm1[:nocc, nocc:] = dov
-        dm1[nocc:, :nocc] = dvo
-        dm1[nocc:, nocc:] = dvv
+        dm1 = _make_rdm1(mycc, [doo, dov, dvo, dvv])
 
-        dm1_my = make_rdm1(mycc, t1, t2, l1, l2)
+        oo, ov, vo, vv = make_rdm1(mycc, t1, t2, l1, l2)
+        mydm1 = _make_rdm1(mycc, [oo, ov, vo, vv])
 
-        print(np.max(dm1), np.max(dm1_my))
-        print(np.min(dm1), np.min(dm1_my))
+        print(np.max(dm1), np.max(mydm1))
+        print(np.min(dm1), np.min(mydm1))
+        print(np.mean(dm1), np.mean(mydm1))
+        print(np.std(dm1), np.std(mydm1))
 
     mol = gto.Mole()
     mol.verbose = 0
