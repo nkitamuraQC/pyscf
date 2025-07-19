@@ -212,7 +212,7 @@ class FCISolver(direct_spin1.FCISolver):
                       'can lead to wrong results.')
 
         self.converged, e, ci = \
-                lib.davidson1(lambda xs: [op(x) for x in xs],
+                lib.davidson_nosym(lambda xs: [op(x) for x in xs],
                               x0, precond, lessio=self.lessio, **kwargs)
         if kwargs.get('nroots', 1) == 1:
             self.converged = self.converged[0]
